@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.contrib import rnn
 from tensorflow.contrib import legacy_seq2seq
 
+import math
 import numpy as np
 
 
@@ -135,3 +136,18 @@ class Model():
             ret += pred
             char = pred
         return ret
+
+    def get_log_prob(self, session, vocab, text):
+        state = session.run(self.cell.zero_state(1, tf.float32))
+        char_probs = []
+        input = np.zeros((1, 1))
+        for c, char in enumerate(text[:-1]):
+            if char not in vocab or text[c+1] not in vocab:
+                continue
+            input[0, 0] = vocab[char]
+            feed = {self.input_data: input, self.initial_state: state}
+            [probs, state] = session.run([self.probs, self.final_state], feed)
+            char_probs.append(probs[0][vocab[text[c+1]]])
+        probability = np.mean([math.log(x) for x in char_probs])
+        return probability
+        
